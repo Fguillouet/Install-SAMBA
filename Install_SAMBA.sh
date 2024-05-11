@@ -1,5 +1,8 @@
 #/bin/sh
 
+# Initialisation variable
+$ip4=$(ip addr show ens18 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+
 # Update & installation de SAMBA
 sudo apt update
 sudo apt install -y samba
@@ -7,29 +10,35 @@ sudo systemctl enable smbd
 
 # Création d'un partage SAMBA
 clear
-read -p "Entrer le nom du partage samba" NomPartage
-read -p "Entrez un nom pour le nouvel utilisateur" NomUtilisateur
-read -p "Entrez un nom pour le groupe associé au partage" NomGroupe
-read -p "Quel est le chemin du partage" CheminComplet
+read -p "Entrer le nom du partage samba : " NomPartage
+read -p "Entrez un nom pour le nouvel utilisateur : " NomUtilisateur
+read -p "Entrez un nom pour le groupe associé au partage : " NomGroupe
+read -p "Quel est le chemin du partage : " CheminComplet
 
 # Création du dossier partagé
 clear
 echo "step 1"
+mkdir $CheminComplet
+echo "Dossier créé"
 
 # Création de l'utilisateur et asignation au groupe (système + samba)
 echo "step 2"
 useradd $NomUtilisateur
+echo "utilisateur créé"
+passwd $NomUtilisateur
 smbpasswd -a $NomUtilisateur
 
 # Création du groupe
 echo "step 3"
 groupadd $NomGroupe
 gpasswd -a $NomUtilisateur $NomGroupe
+echo "Groupe créé"
 
 # permissions
 echo "step 4"
 chgrp -R $NomGroupe $CheminComplet
 chmod -R g+rw $CheminComplet
+echo "Permissions appliquées"
 
 # Création et import de la configuration SAMBA
 echo "step 5"
@@ -40,10 +49,10 @@ tee -a /etc/samba/smb.conf << END
    guest ok = no
    read only = no
    browseable = yes
-   valid users = $NomGroupe
+   valid users = @$NomGroupe
 END
 sudo systemctl restart smbd
 
 # Fin du script
 echo "L'opération est terminée !!"
-echo "Le partage est disponible à l'adresse \\\\$IP\\\\$NomPartage" 
+echo "Le partage est disponible à l'adresse $ip4 sous le nom $NomPartage" 
