@@ -1,7 +1,7 @@
 #/bin/sh
 
 # Initialisation variable
-$ip4=$(ip addr show ens18 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+ip4=$(ip addr show ens18 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 
 # Update & installation de SAMBA
 sudo apt update
