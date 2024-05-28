@@ -1,20 +1,21 @@
 #/bin/sh
-# Netoyage si une erreur est détectée
+# Cleaning task if an error is detected
 err_catch() {
-   echo "une erreur à été détectée, nettoyage en cours "
+   echo "An error has been detected, cleanning task ..."
    rmdir $CheminComplet
    deluser $NomUtilisateur
    delgroup $NomGroupe
    rm /etc/samba/smb.conf
    mv /etc/samba/smb.conf.bck /etc/samba/smb.conf
+   echo "the cleaning tasks has been completed, end of the script !!!!"
    exit 1
 }
 trap 'err_catch' ERR
 
-# Initialisation variable
+# Variable init
 ip4=$(ip addr show ens18 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 
-# Update & installation de SAMBA
+# Update the host and install SAMBA
 apt_samba() {
    sudo apt update
    sudo apt install -y samba
@@ -22,43 +23,45 @@ apt_samba() {
    cp /etc/samba/smb.conf /etc/samba/smb.conf.bck
 }
 
-# Création d'un partage SAMBA
+# User prompt
 clear
-read -p "Besoin d'installer Samba ? : (Y/N)" InstallSamba
-read -p "Entrer le nom du partage samba : " NomPartage
-read -p "Entrez un nom pour le nouvel utilisateur : " NomUtilisateur
-read -p "Entrez un nom pour le groupe associé au partage : " NomGroupe
-read -p "Quel est le chemin du partage : " CheminComplet
+read -p "Need to install SAMBA ? (Y/N) : " InstallSamba
+read -p "Name of the samba Share : " NomPartage
+read -p "Name of the user linked to the share : " NomUtilisateur
+read -p "Name of the group linked to the share : " NomGroupe
+read -p "Path of the share : " CheminComplet
 
-if (InstallSamba=Y); then
+# Check if the script need to update the host and install samba
+if (InstallSamba="Y"); then
    apt_samba
 fi
+
 # Création du dossier partagé
 clear
 echo "step 1"
 mkdir $CheminComplet
-echo "Dossier créé"
+echo "The Folder has been created"
 
-# Création de l'utilisateur et asignation au groupe (système + samba)
+# User creation on the machine and SAMBA then adding it to the SAMBA group
 echo "step 2"
 useradd $NomUtilisateur
 passwd $NomUtilisateur
 smbpasswd -a $NomUtilisateur
-echo "Utilisateur créé"
+echo "The user has been created"
 
-# Création du groupe
+# Group creation
 echo "step 3"
 groupadd $NomGroupe
 gpasswd -a $NomUtilisateur $NomGroupe
-echo "Groupe créé"
+echo "The group has been created"
 
-# permissions
+# Set the permissions
 echo "step 4"
 chgrp -R $NomGroupe $CheminComplet
 chmod -R g+rw $CheminComplet
-echo "Permissions appliquées"
+echo "The right has been set"
 
-# Création et import de la configuration SAMBA
+# SAMBA configuration
 echo "step 5"
 tee -a /etc/samba/smb.conf <<END
 [$NomPartage]
@@ -71,6 +74,6 @@ tee -a /etc/samba/smb.conf <<END
 END
 sudo systemctl restart smbd
 
-# Fin du script
-echo "L'opération est terminée !!"
-echo "Le partage est disponible à l'adresse $ip4 sous le nom $NomPartage"
+# End of the script
+echo "The share is now online !!"
+echo "the share is now available on windows here \\\\$ip4\\$NomPartage"
