@@ -1,13 +1,15 @@
 #/bin/sh
+# Netoyage si une erreur est détectée
 err_catch() {
    echo "une erreur à été détectée, nettoyage en cours "
    rmdir $CheminComplet
-   userdel $NomUtilisateur
-   groupedel $NomGroupe
+   deluser $NomUtilisateur
+   delgroup $NomGroupe
    rm /etc/samba/smb.conf
    mv /etc/samba/smb.conf.bck /etc/samba/smb.conf
    exit 1
 }
+trap 'err_catch' ERR
 
 # Initialisation variable
 ip4=$(ip addr show ens18 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
